@@ -1,0 +1,12 @@
+/node_modules/
+/public/build/
+
+config.ts
+
+.firebaserc
+firebase.json
+
+/.firebase/
+/.vscode/
+
+.DS_Store
