@@ -44,6 +44,8 @@ export class World {
       return;
     }
 
+    await ZonesGenerator.SetupZones();
+
     let connections = await LoadConnections();
     for (let i = 0; i < connections.length; i++) {
       this.AddConnectionFromInfo(connections[i], false);
@@ -53,7 +55,7 @@ export class World {
     this.SortAll();
   }
 
-  Reload(connections : ConnectionInfo[]) {
+  public Reload(connections : ConnectionInfo[]) {
     this.connections = [];
     this.balls = [];
 
@@ -64,7 +66,7 @@ export class World {
     this.SortAll();
   }
 
-  SortAll() {
+  public SortAll() {
     if (this.balls.length == 0) {
       return;
     }
@@ -85,13 +87,36 @@ export class World {
 
     this.Sort(home, unsorted);
 
-    for(let i = 0; i < unsorted.length; i++) {
-      unsorted[i].x = -200;
-      unsorted[i].y = 0;
+    while(unsorted.length > 0) {
+      home = unsorted[0];
+
+      let bestPosition = { x: 0, y: 0 };
+      let bestScore = Number.MIN_SAFE_INTEGER;
+
+      for(let i = 0; i < 1000; i++) {
+        let x = (Math.random() * 2 - 1) * (this.screenSize.x / 2);
+        let y = (Math.random() * 2 - 1) * (this.screenSize.y / 2);
+
+        let score = this.RatePosition(x, y);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestPosition = {x: x, y: y};
+        }
+
+        if(score >= 200) {
+          break;
+        }
+      }
+
+      home.x = bestPosition.x;
+      home.y = bestPosition.y;
+
+      this.Sort(home, unsorted);
     }
   }
 
-  Sort(center: Ball, unsorted: Ball[]) {
+  private Sort(center: Ball, unsorted: Ball[]) {
     unsorted.splice(unsorted.indexOf(center), 1);
 
     let connected = this.GetConnectedBalls(center);
@@ -119,6 +144,10 @@ export class World {
           bestScore = score;
           bestPosition = position;
         }
+
+        if(score >= 200) {
+          break;
+        }
       }
 
       connected[i].x = bestPosition.x;
@@ -128,7 +157,7 @@ export class World {
     }
   }
 
-  RatePosition(x: number, y: number) {
+  private RatePosition(x: number, y: number) {
     if (
       x < -this.screenSize.x / 2 + 20 ||
       x >= this.screenSize.x / 2 - 20 ||
@@ -152,7 +181,7 @@ export class World {
     return Math.min(closestDistance, 200);
   }
 
-  Distance(x1: number, y1: number, x2: number, y2: number) {
+  private Distance(x1: number, y1: number, x2: number, y2: number) {
     let x = x1 - x2;
     let y = y1 - y2;
 

@@ -142,7 +142,7 @@ export default class MainLoop {
 
   draw() {
     this.ctx.beginPath();
-    this.ctx.fillStyle = "rgb(248, 210, 77)";
+    this.ctx.fillStyle = "rgb(60, 43, 61)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.world.connections.forEach((connection) => {
