@@ -6,10 +6,12 @@ import {
   doc,
   addDoc,
   getDocs,
+  setDoc,
   deleteDoc,
   onSnapshot,
   DocumentData,
   QueryDocumentSnapshot,
+  Firestore,
 } from "firebase/firestore";
 import { firebaseConfig } from "../config";
 
@@ -29,7 +31,7 @@ onSnapshot(collection(db, "connections"), (snapshot) => {
   world.Reload(connections);
 });
 
-export async function SetupDatabase(wrld: World) {
+export async function OnUpdate(wrld: World) {
   world = wrld;
 }
 
@@ -91,4 +93,20 @@ function GetConnectionFromDocData(
     type: data.type,
     endTime: data.endtime,
   };
+}
+
+export async function GetPassword(): Promise<string> {
+  const snapshot = await getDocs(collection(db, "passwords"));
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    if (snapshot.docs[i].id == "password") {
+      return snapshot.docs[i].data().password;
+    }
+  }
+
+  throw new Error("Failed to get password.");
+}
+
+export async function SetPassword(password: string) {
+  let passwordDoc = doc(db, "passwords", "password");
+  await setDoc(passwordDoc, { password: password });
 }

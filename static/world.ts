@@ -1,5 +1,10 @@
 import type { ZoneInfo } from "./zones";
-import { SetupDatabase, DeleteConnection, LoadConnections, SaveConnection } from "./database";
+import {
+  OnUpdate,
+  DeleteConnection,
+  LoadConnections,
+  SaveConnection,
+} from "./database";
 import ZonesGenerator from "./zones";
 import { isLoaded, screenSize } from "./stores";
 import { shuffle } from "./utils";
@@ -10,6 +15,7 @@ export class World {
   connections: Connection[];
 
   isLoaded: boolean;
+  isLoggedIn: boolean;
   screenSize: { x: number; y: number };
 
   angles: number[];
@@ -21,7 +27,7 @@ export class World {
     this.isLoaded = false;
     this.screenSize = { x: 0, y: 0 };
 
-    SetupDatabase(this);
+    OnUpdate(this);
 
     isLoaded.subscribe((value) => {
       this.isLoaded = value;
@@ -55,14 +61,14 @@ export class World {
     this.SortAll();
   }
 
-  public Reload(connections : ConnectionInfo[]) {
+  public Reload(connections: ConnectionInfo[]) {
     this.connections = [];
     this.balls = [];
 
     for (let i = 0; i < connections.length; i++) {
       this.AddConnectionFromInfo(connections[i], false);
     }
-    
+
     this.SortAll();
   }
 
@@ -78,8 +84,12 @@ export class World {
 
     let home = this.balls.find((x) => x.zone.name == "Setent-Qintis");
     if (!home) {
-      home = this.balls[0];
+      home = this.balls.find((x) => x.zone.name == "Everwinter Expanse");
+      if (!home) {
+        home = this.balls[0];
+      }
     }
+    
     home.x = 0;
     home.y = 0;
 
@@ -87,13 +97,13 @@ export class World {
 
     this.Sort(home, unsorted);
 
-    while(unsorted.length > 0) {
+    while (unsorted.length > 0) {
       home = unsorted[0];
 
       let bestPosition = { x: 0, y: 0 };
       let bestScore = Number.MIN_SAFE_INTEGER;
 
-      for(let i = 0; i < 1000; i++) {
+      for (let i = 0; i < 1000; i++) {
         let x = (Math.random() * 2 - 1) * (this.screenSize.x / 2);
         let y = (Math.random() * 2 - 1) * (this.screenSize.y / 2);
 
@@ -101,10 +111,10 @@ export class World {
 
         if (score > bestScore) {
           bestScore = score;
-          bestPosition = {x: x, y: y};
+          bestPosition = { x: x, y: y };
         }
 
-        if(score >= 200) {
+        if (score >= 200) {
           break;
         }
       }
@@ -145,7 +155,7 @@ export class World {
           bestPosition = position;
         }
 
-        if(score >= 200) {
+        if (score >= 200) {
           break;
         }
       }
@@ -336,11 +346,13 @@ export class World {
     let b2 = connection.end;
     this.connections.splice(this.connections.indexOf(connection), 1);
 
-    if (this.GetConnections(b1).length == 0) {
+    let connections1 = this.GetConnections(b1);
+    if (connections1.length == 0) {
       this.balls.splice(this.balls.indexOf(b2), 1);
     }
 
-    if (this.GetConnections(b2).length == 0) {
+    let connections2 = this.GetConnections(b2);
+    if (connections2.length == 0) {
       this.balls.splice(this.balls.indexOf(b2), 1);
     }
 

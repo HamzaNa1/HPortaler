@@ -4,7 +4,9 @@
   import type MainLoop from "../static/loop";
 
   import { fly } from "svelte/transition";
-  import { isLoaded } from "../static/stores";
+  import { isLoggedIn, isLoaded } from "../static/stores";
+
+  import { CheckPassword } from "../static/passwordManager";
 
   let from: string = "";
   let to: string = "";
@@ -19,6 +21,13 @@
   let loaded = false;
   isLoaded.subscribe((value) => {
     loaded = value;
+  });
+
+  let key: string = "";
+
+  let loggedIn = false;
+  isLoggedIn.subscribe((value) => {
+    loggedIn = value;
   });
 
   export function SetMainLoop(loop: MainLoop) {
@@ -74,93 +83,133 @@
   </div>
 
   <div style="height: 90px" />
-  <div class="obj">
-    <span class="text">From</span>
-    <AutoCompleteInput bind:value={from} />
-  </div>
-
-  <div class="obj">
-    <span class="text">To</span>
-    <AutoCompleteInput bind:value={to} />
-  </div>
-
-  <br />
-
-  <div class="obj">
-    <span class="text">h</span>
-    <input
-      type="number"
-      min="0"
-      max="23"
-      bind:value={h}
-      step="1"
-      style="width: 50px; margin-right: 30px"
-    />
-    <span class="text">m</span>
-    <input
-      type="number"
-      min="0"
-      max="59"
-      bind:value={m}
-      step="1"
-      style="width: 50px"
-    />
-  </div>
-
-  <div class="obj buttonsHolder">
-    <button
-      class="clearButton"
-      style="background-color: #39842A"
-      on:click={(_e) => (type = "green")}>2</button
+  {#if loggedIn}
+    <div
+      in:fly={{
+        x: -500,
+        duration: 1000,
+      }}
     >
-    <button
-      class="clearButton"
-      style="background-color: #404584"
-      on:click={(_e) => (type = "blue")}>7</button
-    >
-    <button
-      class="clearButton"
-      style="background-color: #D69D00"
-      on:click={(_e) => (type = "gold")}>20</button
-    >
-  </div>
+      <div class="obj">
+        <span class="text">From</span>
+        <AutoCompleteInput bind:value={from} />
+      </div>
 
-  <br />
+      <div class="obj">
+        <span class="text">To</span>
+        <AutoCompleteInput bind:value={to} />
+      </div>
 
-  <div class="obj">
-    <button
-      class="button"
-      on:click={(_e) => {
-        if (mainLoop != null) {
-          mainLoop.world.SortAll();
-          mainLoop.addConnection(GetSidebarInfo());
-          Reset();
-        }
-      }}>Add</button
-    >
-  </div>
+      <br />
 
-  <div class="obj">
-    <button
-      class="button"
-      on:click={(_e) => {
-        if (mainLoop != null) {
-          mainLoop.deleteSelected();
-        }
-      }}>Delete</button
-    >
-  </div>
+      <div class="obj">
+        <span class="text">h</span>
+        <input
+          type="number"
+          min="0"
+          max="23"
+          bind:value={h}
+          step="1"
+          style="width: 50px; margin-right: 30px"
+        />
+        <span class="text">m</span>
+        <input
+          type="number"
+          min="0"
+          max="59"
+          bind:value={m}
+          step="1"
+          style="width: 50px"
+        />
+      </div>
 
-  <div class="obj">
-    <button
-      class="button"
-      on:click={(_e) => {
-        if (mainLoop != null) {
-          mainLoop.randomizePositions();
-        }
-      }}>Randomize</button
+      <div class="obj buttonsHolder">
+        <button
+          class="clearButton"
+          style="background-color: #39842A"
+          on:click={(_e) => (type = "green")}>2</button
+        >
+        <button
+          class="clearButton"
+          style="background-color: #404584"
+          on:click={(_e) => (type = "blue")}>7</button
+        >
+        <button
+          class="clearButton"
+          style="background-color: #D69D00"
+          on:click={(_e) => (type = "gold")}>20</button
+        >
+        <button
+          class="clearButton"
+          style="background-color: #9513b6"
+          on:click={(_e) => (type = "royal")}>R</button
+        >
+      </div>
+
+      <br />
+
+      <div class="obj">
+        <button
+          class="button"
+          on:click={(_e) => {
+            if (mainLoop != null) {
+              mainLoop.world.SortAll();
+              mainLoop.addConnection(GetSidebarInfo());
+              Reset();
+            }
+          }}>Add</button
+        >
+      </div>
+
+      <div class="obj">
+        <button
+          class="button"
+          on:click={(_e) => {
+            if (mainLoop != null) {
+              mainLoop.deleteSelected();
+            }
+          }}>Delete</button
+        >
+      </div>
+
+      <div class="obj">
+        <button
+          class="button"
+          on:click={(_e) => {
+            if (mainLoop != null) {
+              mainLoop.randomizePositions();
+            }
+          }}>Randomize</button
+        >
+      </div>
+    </div>
+  {:else}
+    <div
+      out:fly={{
+        x: 500,
+        duration: 1000,
+      }}
+      class="loginPanel"
     >
-  </div>
+      <div class="obj">
+        <span class="text">Key</span>
+        <input class="loginInput" spellcheck="false" bind:value={key} />
+      </div>
+
+      <div class="obj">
+        <button
+          class="button"
+          on:click={async (_e) => {
+            if (!loggedIn) {
+              if (await CheckPassword(key)) {
+                isLoggedIn.set(true);
+              }
+            }
+          }}>Login</button
+        >
+      </div>
+    </div>
+  {/if}
 
   <div class="footer">
     <p class="footerText">
@@ -200,12 +249,12 @@
   }
 
   .buttonsHolder {
-    overflow: hidden;
-    white-space: nowrap;
+    display: flex;
   }
 
   .clearButton {
-    width: 64px;
+    margin-left: 4px;
+    width: 100%;
     color: white;
     border-color: black;
     font-weight: bold;
@@ -244,5 +293,20 @@
   .footerText {
     font-size: x-small;
     color: #3c2b3d;
+  }
+
+  .loginPanel {
+    position: absolute;
+  }
+
+  .loginInput {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    float: left;
+    border-radius: 5px;
+    resize: none;
+    white-space: nowrap;
+    overflow-x: hidden;
   }
 </style>

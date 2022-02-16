@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { isLoaded } from "../static/stores";
+  import { isLoaded, isLoggedIn } from "../static/stores";
   import { fly } from "svelte/transition";
 
   let container: HTMLDivElement;
   let canvas: HTMLCanvasElement;
 
   let worldLoaded = false;
+  let loggedIn = false;
 
   export function getContainer(): HTMLDivElement {
     return container;
@@ -18,13 +19,17 @@
   isLoaded.subscribe((value) => {
     worldLoaded = value;
   });
+
+  isLoggedIn.subscribe((value) => {
+    loggedIn = value;
+  });
 </script>
 
 <main>
   <div class="container" bind:this={container}>
     <canvas bind:this={canvas} />
-    <div class="loading">
-      {#if !worldLoaded}
+    {#if !worldLoaded}
+      <div class="loading">
         <img
           out:fly={{
             y: -200,
@@ -36,12 +41,8 @@
           width="128px"
           height="128px"
         />
-      {/if}
-      
-      {#if !worldLoaded}
-        <span class="loadingText">Loading...</span>
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
 </main>
 

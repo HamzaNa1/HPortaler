@@ -7,7 +7,7 @@ import type { Ball, Connection } from "./world";
 import type { ZoneInfo } from "./zones";
 import ZonesGenerator from "./zones";
 
-import { screenSize } from "./stores";
+import { isLoggedIn, screenSize } from "./stores";
 
 export default class MainLoop {
   container: any;
@@ -16,12 +16,15 @@ export default class MainLoop {
 
   sidebar: Sidebar;
 
+  isLoggedIn: boolean;
+
   world: World;
   selectedBall: Ball;
 
   mouse: Mouse;
 
   homeImage: HTMLImageElement;
+  blackzoneHomeImage: HTMLImageElement;
 
   constructor(canvas: Canvas, sidebar: Sidebar) {
     this.container = canvas.getContainer();
@@ -30,6 +33,10 @@ export default class MainLoop {
 
     this.sidebar = sidebar;
     sidebar.SetMainLoop(this);
+
+    isLoggedIn.subscribe((value) => {
+      this.isLoggedIn = value;
+    });
 
     this.world = new World();
     this.selectedBall = null;
@@ -58,12 +65,23 @@ export default class MainLoop {
     this.homeImage.width = 40;
     this.homeImage.height = 40;
 
+    this.blackzoneHomeImage = new Image(40, 40);
+    this.blackzoneHomeImage.src = "/blackzoneHome.png";
+    this.blackzoneHomeImage.width = 40;
+    this.blackzoneHomeImage.height = 40;
+
+    this.clear();
     window.requestAnimationFrame(() => this.gameLoop(this));
   }
 
   addConnection(info: SidebarInfo) {
     if (info.from == "" || info.to == "") {
       return;
+    }
+
+    if (info.type == "roya") {
+      info.h = 24;
+      info.m = 0;
     }
 
     let from = ZonesGenerator.GetZone(info.from);
@@ -127,6 +145,11 @@ export default class MainLoop {
 
   gameLoop(self: MainLoop) {
     window.requestAnimationFrame(() => self.gameLoop(self));
+
+    if (!this.isLoggedIn) {
+      return;
+    }
+
     this.update();
     this.draw();
   }
@@ -141,9 +164,7 @@ export default class MainLoop {
   }
 
   draw() {
-    this.ctx.beginPath();
-    this.ctx.fillStyle = "rgb(60, 43, 61)";
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.clear();
 
     this.world.connections.forEach((connection) => {
       this.drawConnection(connection);
@@ -154,6 +175,12 @@ export default class MainLoop {
     });
   }
 
+  clear() {
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "rgb(60, 43, 61)";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
   drawConnection(connection: Connection) {
     let x1 = connection.start.x + this.canvas.width / 2;
     let y1 = connection.start.y + this.canvas.height / 2;
@@ -162,12 +189,14 @@ export default class MainLoop {
 
     this.drawLine(x1, y1, x2, y2, this.connectionToColor(connection));
 
-    this.drawText(
-      (x1 + x2) / 2,
-      (y1 + y2) / 2,
-      this.getTimeLeft(connection),
-      "white"
-    );
+    if (connection.type != "royal") {
+      this.drawText(
+        (x1 + x2) / 2,
+        (y1 + y2) / 2,
+        this.getTimeLeft(connection),
+        "white"
+      );
+    }
   }
 
   drawBall(ball: Ball) {
@@ -176,10 +205,13 @@ export default class MainLoop {
 
     if (ball.zone.name == "Setent-Qintis") {
       this.drawImage(x, y, this.homeImage);
+    } else if (ball.zone.name == "Everwinter Expanse") {
+      this.drawImage(x, y, this.blackzoneHomeImage);
     } else {
       this.drawCircleFill(x, y, ball.radius, this.zoneToColor(ball.zone));
       this.drawText(x, y, ball.zone.tier, "white");
     }
+
     if (ball == this.selectedBall) {
       this.drawCircle(x, y, ball.radius, 1, "black");
     } else {
@@ -247,6 +279,8 @@ export default class MainLoop {
         return "rgb(0, 0, 255)";
       case "gold":
         return "rgb(214, 157, 0)";
+      case "royal":
+        return "black";
       default:
         return "";
     }
