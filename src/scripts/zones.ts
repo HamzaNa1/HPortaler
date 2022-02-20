@@ -38,6 +38,8 @@ class ZonesGenerator {
   static async SetupZones(): Promise<void> {
     ZonesGenerator.zones = [];
     ZonesGenerator.zones = await this.fetchZonesJson();
+
+    ZonesGenerator.zones = ZonesGenerator.zones.filter(x => x.color != " ");
   }
 
   static async fetchZonesJson() {

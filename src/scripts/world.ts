@@ -1,12 +1,7 @@
 import type { ZoneInfo } from "./zones";
-import {
-  OnUpdate,
-  DeleteConnection,
-  LoadConnections,
-  SaveConnection,
-} from "./database";
+import { database } from "./database";
 import ZonesGenerator from "./zones";
-import { isLoaded, screenSize } from "./stores";
+import { isLoaded, screenSize, distanceSetting } from "./stores";
 import { shuffle } from "./utils";
 
 export class World {
@@ -18,6 +13,8 @@ export class World {
   isLoggedIn: boolean;
   screenSize: { x: number; y: number };
 
+  distance: number;
+
   angles: number[];
 
   constructor() {
@@ -26,8 +23,14 @@ export class World {
     this.connections = [];
     this.isLoaded = false;
     this.screenSize = { x: 0, y: 0 };
+    this.distance = 200;
 
-    OnUpdate(this);
+    distanceSetting.subscribe((value) => {
+      this.distance = value;
+      this.SortAll();
+    });
+
+    database.onUpdate(this);
 
     isLoaded.subscribe((value) => {
       this.isLoaded = value;
@@ -52,7 +55,7 @@ export class World {
 
     await ZonesGenerator.SetupZones();
 
-    let connections = await LoadConnections();
+    let connections = await database.loadConnections();
     for (let i = 0; i < connections.length; i++) {
       this.AddConnectionFromInfo(connections[i], false);
     }
@@ -77,52 +80,89 @@ export class World {
       return;
     }
 
-    for (let i = 0; i < this.balls.length; i++) {
-      this.balls[i].x = -10000;
-      this.balls[i].y = -10000;
-    }
+    let bestPositions: RatedPosition[] = null;
+    let bestRating = Number.MIN_SAFE_INTEGER;
 
-    let home = this.balls.find((x) => x.zone.name == "Setent-Qintis");
-    if (!home) {
-      home = this.balls.find((x) => x.zone.name == "Everwinter Expanse");
+    for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < this.balls.length; i++) {
+        this.balls[i].x = -10000;
+        this.balls[i].y = -10000;
+      }
+
+      let home = this.balls.find((x) => x.zone.name == "Setent-Qintis");
       if (!home) {
-        home = this.balls[0];
-      }
-    }
-    
-    home.x = 0;
-    home.y = 0;
-
-    let unsorted = this.balls.slice();
-
-    this.Sort(home, unsorted);
-
-    while (unsorted.length > 0) {
-      home = unsorted[0];
-
-      let bestPosition = { x: 0, y: 0 };
-      let bestScore = Number.MIN_SAFE_INTEGER;
-
-      for (let i = 0; i < 1000; i++) {
-        let x = (Math.random() * 2 - 1) * (this.screenSize.x / 2);
-        let y = (Math.random() * 2 - 1) * (this.screenSize.y / 2);
-
-        let score = this.RatePosition(x, y);
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestPosition = { x: x, y: y };
-        }
-
-        if (score >= 200) {
-          break;
+        home = this.balls.find((x) => x.zone.name == "Everwinter Expanse");
+        if (!home) {
+          home = this.balls[0];
         }
       }
 
-      home.x = bestPosition.x;
-      home.y = bestPosition.y;
+      home.x = 0;
+      home.y = 0;
+
+      let unsorted = this.balls.slice();
 
       this.Sort(home, unsorted);
+
+      while (unsorted.length > 0) {
+        home = unsorted[0];
+
+        let bestPosition = { x: 0, y: 0 };
+        let bestScore = Number.MIN_SAFE_INTEGER;
+
+        for (let i = 0; i < 1000; i++) {
+          let x = (Math.random() * 2 - 1) * (this.screenSize.x / 2);
+          let y = (Math.random() * 2 - 1) * (this.screenSize.y / 2);
+
+          let score = this.RatePosition(x, y);
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestPosition = { x: x, y: y };
+          }
+
+          if (score >= this.distance) {
+            break;
+          }
+        }
+
+        home.x = bestPosition.x;
+        home.y = bestPosition.y;
+
+        this.Sort(home, unsorted);
+      }
+
+      let rating = this.RateOverall();
+      if (rating > bestRating) {
+        bestRating = rating;
+        bestPositions = this.SaveCurrentPositions();
+      }
+    }
+
+    this.LoadPositions(bestPositions);
+  }
+
+  private SaveCurrentPositions(): RatedPosition[] {
+    let positions = [];
+
+    for (let i = 0; i < this.balls.length; i++) {
+      let position: RatedPosition = {
+        ball: this.balls[i],
+        x: this.balls[i].x,
+        y: this.balls[i].y,
+      };
+
+      positions.push(position);
+    }
+
+    return positions;
+  }
+
+  private LoadPositions(positions: RatedPosition[]) {
+    for (let i = 0; i < positions.length; i++) {
+      let position = positions[i];
+      position.ball.x = position.x;
+      position.ball.y = position.y;
     }
   }
 
@@ -134,7 +174,6 @@ export class World {
       if (!unsorted.includes(connected[i])) {
         continue;
       }
-      const distance = 200;
 
       let bestPosition = { x: 0, y: 0 };
       let bestScore = Number.MIN_SAFE_INTEGER;
@@ -145,8 +184,8 @@ export class World {
         let angle = (this.angles[r] / 180) * Math.PI;
 
         let position = {
-          x: center.x + Math.cos(angle) * distance,
-          y: center.y + Math.sin(angle) * distance,
+          x: center.x + Math.cos(angle) * this.distance,
+          y: center.y + Math.sin(angle) * this.distance,
         };
         let score = this.RatePosition(position.x, position.y);
 
@@ -155,7 +194,7 @@ export class World {
           bestPosition = position;
         }
 
-        if (score >= 200) {
+        if (score >= this.distance) {
           break;
         }
       }
@@ -167,10 +206,10 @@ export class World {
     }
   }
 
-  private RatePosition(x: number, y: number) {
+  private RatePosition(x: number, y: number, ignore: Ball = null) {
     if (
-      x < -this.screenSize.x / 2 + 20 ||
-      x >= this.screenSize.x / 2 - 20 ||
+      x < -this.screenSize.x / 2 + 50 ||
+      x >= this.screenSize.x / 2 - 50 ||
       y < -this.screenSize.y / 2 + 20 ||
       y >= this.screenSize.y / 2 - 50
     ) {
@@ -182,13 +221,80 @@ export class World {
     for (let i = 0; i < this.balls.length; i++) {
       let currentBall = this.balls[i];
 
+      if (currentBall == ignore) {
+        continue;
+      }
+
       closestDistance = Math.min(
         closestDistance,
         this.Distance(x, y, currentBall.x, currentBall.y)
       );
     }
 
-    return Math.min(closestDistance, 200);
+    return Math.min(closestDistance, this.distance);
+  }
+
+  private RateOverall(): number {
+    let rating = 0;
+
+    for (let i = 0; i < this.balls.length; i++) {
+      rating += this.RatePosition(
+        this.balls[i].x,
+        this.balls[i].y,
+        this.balls[i]
+      );
+    }
+
+    for (let i = 0; i < this.connections.length; i++) {
+      for (let j = i + 1; j < this.connections.length; j++) {
+        if (this.Intersect(this.connections[i], this.connections[j])) {
+          rating -= 2000;
+        }
+      }
+    }
+
+    return rating;
+  }
+
+  private ccw(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    x3: number,
+    y3: number
+  ) {
+    return (y3 - y1) * (x2 - x1) > (y2 - y1) * (x3 - x1);
+  }
+
+  public Intersect(c1: Connection, c2: Connection): boolean {
+    return (
+      this.ccw(
+        c1.start.x,
+        c1.start.y,
+        c2.start.x,
+        c2.start.y,
+        c2.end.x,
+        c2.end.y
+      ) !=
+        this.ccw(
+          c1.end.x,
+          c1.end.y,
+          c2.start.x,
+          c2.start.y,
+          c2.end.x,
+          c2.end.y
+        ) &&
+      this.ccw(
+        c1.start.x,
+        c1.start.y,
+        c1.end.x,
+        c1.end.y,
+        c2.start.x,
+        c2.start.y
+      ) !=
+        this.ccw(c1.start.x, c1.start.y, c1.end.x, c1.end.y, c2.end.x, c2.end.y)
+    );
   }
 
   private Distance(x1: number, y1: number, x2: number, y2: number) {
@@ -242,7 +348,7 @@ export class World {
 
     this.connections.push(connection);
     if (save) {
-      SaveConnection(connection);
+      database.saveConnection(connection);
     }
   }
 
@@ -271,7 +377,7 @@ export class World {
 
     this.connections.push(connection);
     if (save) {
-      SaveConnection(connection);
+      database.saveConnection(connection);
     }
   }
 
@@ -356,7 +462,7 @@ export class World {
       this.balls.splice(this.balls.indexOf(b2), 1);
     }
 
-    DeleteConnection(connection);
+    database.deleteConnection(connection);
   }
 
   DeleteBall(ball: Ball): void {
@@ -391,10 +497,17 @@ export interface Connection {
   type: string;
   endTime: number;
 }
+
 export interface ConnectionInfo {
   id: string;
   start: string;
   end: string;
   type: string;
   endTime: number;
+}
+
+interface RatedPosition {
+  ball: Ball;
+  x: number;
+  y: number;
 }

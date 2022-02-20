@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ZoneGenerator from "../static/zones";
+  import ZoneGenerator from "../scripts/zones";
 
   export let value: string = "";
 

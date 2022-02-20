@@ -1,12 +1,20 @@
 <script lang="ts">
   import AutoCompleteInput from "./AutoCompleteInput.svelte";
-  import type SidebarInfo from "../static/sidebar";
-  import type MainLoop from "../static/loop";
+  import type SidebarInfo from "../scripts/sidebar";
+  import type MainLoop from "../scripts/loop";
 
   import { fly } from "svelte/transition";
-  import { isLoggedIn, isLoaded } from "../static/stores";
+  import {
+    savedDistance,
+    savedScale,
+    distanceSetting,
+    scaleSetting,
+    isLoggedIn,
+    isLoaded,
+    lastPassowrd,
+  } from "../scripts/stores";
 
-  import { CheckPassword } from "../static/passwordManager";
+  import { Login } from "../scripts/passwordManager";
 
   let from: string = "";
   let to: string = "";
@@ -16,19 +24,27 @@
   let h: number = 0;
   let m: number = 0;
 
+  let distance: number = savedDistance;
+  let scale: number = savedScale;
+  distanceSetting.set(distance);
+  scaleSetting.set(scale / 100);
+
   let mainLoop: MainLoop;
 
-  let loaded = false;
+  let loaded: boolean = false;
   isLoaded.subscribe((value) => {
     loaded = value;
   });
 
   let key: string = "";
 
-  let loggedIn = false;
+  let loggedIn: boolean = false;
   isLoggedIn.subscribe((value) => {
     loggedIn = value;
   });
+
+  let passwordLoaded = false;
+  LoadPassword();
 
   export function SetMainLoop(loop: MainLoop) {
     mainLoop = loop;
@@ -54,6 +70,22 @@
     to = "";
     h = 0;
     m = 0;
+  }
+
+  function changeDistance(newDistance: number) {
+    distanceSetting.set(newDistance);
+    window.localStorage.setItem("distance", newDistance.toString());
+  }
+
+  function changeScale(newScale: number) {
+    scaleSetting.set(newScale / 100);
+    window.localStorage.setItem("scale", newScale.toString());
+  }
+
+  async function LoadPassword() {
+    await Login(lastPassowrd);
+
+    passwordLoaded = true;
   }
 </script>
 
@@ -182,9 +214,69 @@
           }}>Randomize</button
         >
       </div>
+
+      <div class="obj">
+        <span class="text">Distance</span>
+        <div class="distanceHolder">
+          <input
+            class="distanceSlider"
+            type="range"
+            min="150"
+            max="250"
+            bind:value={distance}
+            on:change={(_e) => {
+              changeDistance(distance);
+            }}
+          />
+
+          <input
+            class="distanceInput"
+            type="number"
+            min="150"
+            max="250"
+            bind:value={distance}
+            step="1"
+            on:change={(_e) => {
+              changeDistance(distance);
+            }}
+          />
+        </div>
+      </div>
+
+      <div class="obj">
+        <span class="text">Scale (%)</span>
+        <div class="distanceHolder">
+          <input
+            class="distanceSlider"
+            type="range"
+            min="75"
+            max="125"
+            bind:value={scale}
+            on:change={(_e) => {
+              changeScale(scale);
+            }}
+          />
+
+          <input
+            class="distanceInput"
+            type="number"
+            min="75"
+            max="125"
+            bind:value={scale}
+            step="1"
+            on:change={(_e) => {
+              changeScale(scale);
+            }}
+          />
+        </div>
+      </div>
     </div>
-  {:else}
+  {:else if passwordLoaded}
     <div
+      in:fly={{
+        x: -500,
+        duration: 1000,
+      }}
       out:fly={{
         x: 500,
         duration: 1000,
@@ -200,11 +292,7 @@
         <button
           class="button"
           on:click={async (_e) => {
-            if (!loggedIn) {
-              if (await CheckPassword(key)) {
-                isLoggedIn.set(true);
-              }
-            }
+            await Login(key);
           }}>Login</button
         >
       </div>
@@ -279,6 +367,43 @@
 
   .button:active {
     background-color: #1a836c;
+  }
+
+  .distanceHolder {
+    display: flex;
+  }
+
+  .distanceSlider {
+    -webkit-appearance: none;
+    margin-top: 5px;
+    height: 15px;
+    border-radius: 5px;
+    background: #ffffff;
+    outline: none;
+    margin-left: 4px;
+  }
+
+  .distanceSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #20a186;
+    cursor: pointer;
+  }
+
+  .distanceSlider::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #20a186;
+    cursor: pointer;
+  }
+
+  .distanceInput {
+    margin-left: 4px;
+    width: 100%;
   }
 
   .footer {

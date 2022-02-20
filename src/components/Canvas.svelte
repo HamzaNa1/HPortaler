@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isLoaded, isLoggedIn } from "../static/stores";
+  import { isLoaded, isLoggedIn } from "../scripts/stores";
   import { fly } from "svelte/transition";
 
   let container: HTMLDivElement;
@@ -56,7 +56,7 @@
     position: fixed;
     width: 100%;
     height: 100%;
-    background-color: black;
+    background-color: rgb(60, 43, 61);
     top: 0;
     left: 220px;
   }
@@ -70,11 +70,5 @@
     line-height: 300px;
     text-align: center;
     font-size: xx-large;
-  }
-
-  .loadingText {
-    display: inline-block;
-    vertical-align: middle;
-    line-height: normal;
   }
 </style>

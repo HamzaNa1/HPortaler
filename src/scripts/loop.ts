@@ -1,13 +1,13 @@
-import type Canvas from "../src/Canvas.svelte";
-import type Sidebar from "../src/Sidebar.svelte";
-import type SidebarInfo from "../static/sidebar";
+import type Canvas from "../components/Canvas.svelte";
+import type Sidebar from "../components/Sidebar.svelte";
+import type SidebarInfo from "./sidebar";
 
 import { World } from "./world";
 import type { Ball, Connection } from "./world";
 import type { ZoneInfo } from "./zones";
 import ZonesGenerator from "./zones";
 
-import { isLoggedIn, screenSize } from "./stores";
+import { isLoggedIn, screenSize, scaleSetting } from "./stores";
 
 export default class MainLoop {
   container: any;
@@ -26,6 +26,8 @@ export default class MainLoop {
   homeImage: HTMLImageElement;
   blackzoneHomeImage: HTMLImageElement;
 
+  scale: number;
+
   constructor(canvas: Canvas, sidebar: Sidebar) {
     this.container = canvas.getContainer();
     this.canvas = canvas.getCanvas();
@@ -40,6 +42,12 @@ export default class MainLoop {
 
     this.world = new World();
     this.selectedBall = null;
+
+    this.scale = 1;
+    scaleSetting.subscribe((value) => {
+      this.scale = value;
+    });
+    scaleSetting.update((value) => value);
 
     this.mouse = {
       x: 0,
@@ -74,12 +82,25 @@ export default class MainLoop {
     window.requestAnimationFrame(() => this.gameLoop(this));
   }
 
+  changeScale(newScale: number) {
+    if (newScale <= 0) {
+      return;
+    }
+
+    this.scale = newScale;
+
+    this.homeImage.width = 40 * this.scale;
+    this.homeImage.height = 40 * this.scale;
+    this.blackzoneHomeImage.width = 40 * this.scale;
+    this.blackzoneHomeImage.height = 40 * this.scale;
+  }
+
   addConnection(info: SidebarInfo) {
     if (info.from == "" || info.to == "") {
       return;
     }
 
-    if (info.type == "roya") {
+    if (info.type == "royal") {
       info.h = 24;
       info.m = 0;
     }
@@ -175,6 +196,13 @@ export default class MainLoop {
     });
   }
 
+  intersect() {
+    let c1 = this.world.connections[0];
+    let c2 = this.world.connections[1];
+
+    alert(this.world.Intersect(c1, c2));
+  }
+
   clear() {
     this.ctx.beginPath();
     this.ctx.fillStyle = "rgb(60, 43, 61)";
@@ -208,17 +236,22 @@ export default class MainLoop {
     } else if (ball.zone.name == "Everwinter Expanse") {
       this.drawImage(x, y, this.blackzoneHomeImage);
     } else {
-      this.drawCircleFill(x, y, ball.radius, this.zoneToColor(ball.zone));
+      this.drawCircleFill(
+        x,
+        y,
+        ball.radius * this.scale,
+        this.zoneToColor(ball.zone)
+      );
       this.drawText(x, y, ball.zone.tier, "white");
     }
 
     if (ball == this.selectedBall) {
-      this.drawCircle(x, y, ball.radius, 1, "black");
+      this.drawCircle(x, y, ball.radius * this.scale, 1, "black");
     } else {
-      this.drawCircle(x, y, ball.radius, 0.33, "black");
+      this.drawCircle(x, y, ball.radius * this.scale, 0.33, "black");
     }
 
-    this.drawText(x, y + ball.radius + 20, ball.zone.name, "white");
+    this.drawText(x, y + ball.radius * this.scale * 2, ball.zone.name, "white");
   }
 
   drawCircleFill(x: number, y: number, radius: number, color: string) {
@@ -256,7 +289,8 @@ export default class MainLoop {
     this.ctx.strokeStyle = "black";
     this.ctx.lineWidth = 2;
     this.ctx.fillStyle = color;
-    this.ctx.font = "bold 12px Arial";
+    let fontSize = 12 * this.scale;
+    this.ctx.font = "bold " + fontSize + "px Arial";
     let metrics = this.ctx.measureText(text);
     x -= metrics.width / 2;
     y +=
@@ -268,7 +302,13 @@ export default class MainLoop {
 
   drawImage(x: number, y: number, image: CanvasImageSource) {
     this.ctx.beginPath();
-    this.ctx.drawImage(image, x - 20, y - 20, 40, 40);
+    this.ctx.drawImage(
+      image,
+      x - 20 * this.scale,
+      y - 20 * this.scale,
+      40 * this.scale,
+      40 * this.scale
+    );
   }
 
   connectionToColor(connection: Connection): string {
@@ -313,7 +353,7 @@ export default class MainLoop {
     let hours = time / 3600000;
     let mintues = (hours - Math.floor(hours)) * 60;
 
-    return Math.floor(hours) + "h " + Math.floor(mintues) + " m";
+    return Math.floor(hours) + "h " + Math.floor(mintues) + "m";
   }
 }
 

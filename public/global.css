@@ -61,12 +61,3 @@ button:not(:disabled):active {
 button:focus {
 	border-color: #666;
 }
-
-input {
-    background-color: #fec200;
-    color: white;
-  }
-
-span {
-	font-weight: bold;
-}

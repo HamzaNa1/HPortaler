@@ -1,7 +1,7 @@
 /node_modules/
 /public/build/
 
-config.ts
+/src/config.ts
 
 .firebaserc
 firebase.json
