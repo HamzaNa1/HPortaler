@@ -1,7 +1,7 @@
 import type { ZoneInfo } from "./zones";
 import { database } from "./database";
 import ZonesGenerator from "./zones";
-import { isLoaded, screenSize, distanceSetting } from "./stores";
+import { isLoaded, screenSize, distanceSetting, scaleSetting } from "./stores";
 import { shuffle } from "./utils";
 
 export class World {
@@ -14,6 +14,7 @@ export class World {
   screenSize: { x: number; y: number };
 
   distance: number;
+  scale: number;
 
   angles: number[];
 
@@ -24,10 +25,15 @@ export class World {
     this.isLoaded = false;
     this.screenSize = { x: 0, y: 0 };
     this.distance = 200;
+    this.scale = 1;
 
     distanceSetting.subscribe((value) => {
       this.distance = value;
       this.SortAll();
+    });
+
+    scaleSetting.subscribe((value) => {
+      this.scale = value;
     });
 
     database.onUpdate(this);
@@ -61,7 +67,6 @@ export class World {
     }
 
     isLoaded.set(true);
-    this.SortAll();
   }
 
   public Reload(connections: ConnectionInfo[]) {
@@ -72,10 +77,10 @@ export class World {
       this.AddConnectionFromInfo(connections[i], false);
     }
 
-    this.SortAll();
+    this.SortAll("R");
   }
 
-  public SortAll() {
+  public SortAll(a : string = "") {
     if (this.balls.length == 0) {
       return;
     }
@@ -83,7 +88,7 @@ export class World {
     let bestPositions: RatedPosition[] = null;
     let bestRating = Number.MIN_SAFE_INTEGER;
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 40; i++) {
       for (let i = 0; i < this.balls.length; i++) {
         this.balls[i].x = -10000;
         this.balls[i].y = -10000;
@@ -93,7 +98,7 @@ export class World {
       if (!home) {
         home = this.balls.find((x) => x.zone.name == "Everwinter Expanse");
         if (!home) {
-          home = this.balls[0];
+          home = this.balls[Math.floor(Math.random() * this.balls.length)];
         }
       }
 
@@ -208,10 +213,10 @@ export class World {
 
   private RatePosition(x: number, y: number, ignore: Ball = null) {
     if (
-      x < -this.screenSize.x / 2 + 50 ||
-      x >= this.screenSize.x / 2 - 50 ||
-      y < -this.screenSize.y / 2 + 20 ||
-      y >= this.screenSize.y / 2 - 50
+      x < -this.screenSize.x / 2 + 55 * this.scale ||
+      x >= this.screenSize.x / 2 - 55 * this.scale ||
+      y < -this.screenSize.y / 2 + 20 * this.scale ||
+      y >= this.screenSize.y / 2 - 50 * this.scale
     ) {
       return Number.MIN_VALUE;
     }
@@ -333,7 +338,10 @@ export class World {
     endTime: number,
     save: boolean = true
   ) {
-    if (this.ConnectionExists(startZone, endZone)) return;
+    let exstantConnection = this.ConnectionExists(startZone, endZone);
+    if (exstantConnection) {
+      this.RemoveConnection(exstantConnection);
+    }
 
     let start = this.GetBall(startZone);
     let end = this.GetBall(endZone);
@@ -411,17 +419,17 @@ export class World {
     return connected;
   }
 
-  ConnectionExists(zone1: ZoneInfo, zone2: ZoneInfo): boolean {
+  ConnectionExists(zone1: ZoneInfo, zone2: ZoneInfo): Connection {
     for (let i = 0; i < this.connections.length; i++) {
       let connection = this.connections[i];
       if (
         (connection.start.zone == zone1 && connection.end.zone == zone2) ||
         (connection.end.zone == zone1 && connection.start.zone == zone2)
       )
-        return true;
+        return connection;
     }
 
-    return false;
+    return null;
   }
 
   GetBallAt(x: number, y: number): Ball {

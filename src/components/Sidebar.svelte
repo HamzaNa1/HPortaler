@@ -20,6 +20,7 @@
   let to: string = "";
 
   let type: string = "green";
+  let typeColor: string = "background-color: #39842A";
 
   let h: number = 0;
   let m: number = 0;
@@ -86,6 +87,25 @@
     await Login(lastPassowrd);
 
     passwordLoaded = true;
+  }
+
+  function ChangeType(newType: string) {
+    type = newType;
+
+    switch (newType) {
+      case "green":
+        typeColor = "background-color: #39842A";
+        break;
+      case "blue":
+        typeColor = "background-color: #404584";
+        break;
+      case "gold":
+        typeColor = "background-color: #D69D00";
+        break;
+      case "royal":
+        typeColor = "background-color: #9513b6";
+        break;
+    }
   }
 </script>
 
@@ -155,30 +175,32 @@
         />
       </div>
 
-      <div class="obj buttonsHolder">
-        <button
-          class="clearButton"
-          style="background-color: #39842A"
-          on:click={(_e) => (type = "green")}>2</button
-        >
-        <button
-          class="clearButton"
-          style="background-color: #404584"
-          on:click={(_e) => (type = "blue")}>7</button
-        >
-        <button
-          class="clearButton"
-          style="background-color: #D69D00"
-          on:click={(_e) => (type = "gold")}>20</button
-        >
-        <button
-          class="clearButton"
-          style="background-color: #9513b6"
-          on:click={(_e) => (type = "royal")}>R</button
-        >
-      </div>
+      <div class="obj buttonsHolder" style="margin-bottom: 20px;">
+        <div class="typeButtonsHolder">
+          <button
+            class="clearButton"
+            style="background-color: #39842A"
+            on:click={(_e) => ChangeType("green")}>2</button
+          >
+          <button
+            class="clearButton"
+            style="background-color: #404584"
+            on:click={(_e) => ChangeType("blue")}>7</button
+          >
+          <button
+            class="clearButton"
+            style="background-color: #D69D00"
+            on:click={(_e) => ChangeType("gold")}>20</button
+          >
+          <button
+            class="clearButton"
+            style="background-color: #9513b6"
+            on:click={(_e) => ChangeType("royal")}>R</button
+          >
+        </div>
 
-      <br />
+        <button class="currentTypeButton" style={typeColor} />
+      </div>
 
       <div class="obj">
         <button
@@ -337,11 +359,16 @@
   }
 
   .buttonsHolder {
+    display:grid;
+  }
+
+  .typeButtonsHolder {
     display: flex;
   }
 
   .clearButton {
-    margin-left: 4px;
+    margin-left: 2px;
+    margin-right: 2px;
     width: 100%;
     color: white;
     border-color: black;
@@ -350,6 +377,11 @@
 
   .clearButton:active {
     filter: brightness(80%);
+  }
+
+  .currentTypeButton {
+    width: 100%;
+    border-color: black;
   }
 
   .button {

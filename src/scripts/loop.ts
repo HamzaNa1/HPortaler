@@ -47,7 +47,6 @@ export default class MainLoop {
     scaleSetting.subscribe((value) => {
       this.scale = value;
     });
-    scaleSetting.update((value) => value);
 
     this.mouse = {
       x: 0,
@@ -246,7 +245,7 @@ export default class MainLoop {
     }
 
     if (ball == this.selectedBall) {
-      this.drawCircle(x, y, ball.radius * this.scale, 1, "black");
+      this.drawCircle(x, y, ball.radius * this.scale, 1.25, "white");
     } else {
       this.drawCircle(x, y, ball.radius * this.scale, 0.33, "black");
     }
